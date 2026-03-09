@@ -6,7 +6,10 @@
     "user": {"ENV": "DB_USER"},
     "password": {"ENV": "DB_PASSWORD"},
     "port": {"ENV": "DB_PORT"},
-    "schema": "public"
+    "schema": "public",
+    "ssl": {
+      "rejectUnauthorized": false
+    }
   },
   "production": {
     "driver": "pg",
