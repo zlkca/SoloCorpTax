@@ -8,6 +8,13 @@ const router = express.Router();
 router.use(authenticateJWT);
 
 router.post(
+  '/:companyId/documents/extract-incorporation',
+  checkCompanyAccess,
+  documentController.extractUpload.single('file'),
+  documentController.extractIncorporation,
+);
+
+router.post(
   '/:companyId/documents',
   checkCompanyAccess,
   documentController.upload.single('file'),

@@ -1,6 +1,17 @@
 import apiClient from './apiClient';
 
 const documentService = {
+  async extractIncorporation(companyId, file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await apiClient.post(
+      `/companies/${companyId}/documents/extract-incorporation`,
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } },
+    );
+    return response.data;
+  },
+
   async uploadDocument(companyId, file, type, taxYear) {
     const formData = new FormData();
     formData.append('file', file);

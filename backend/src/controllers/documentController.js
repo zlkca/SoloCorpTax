@@ -1,8 +1,10 @@
 const multer = require('multer');
 const db = require('../config/database');
 const { uploadFile, getSignedUrl } = require('../config/s3');
+const { extractIncorporationData } = require('../services/aiExtractService');
 
 const storage = multer.memoryStorage();
+
 const upload = multer({
   storage,
   limits: { fileSize: 10 * 1024 * 1024 },
@@ -125,10 +127,42 @@ async function deleteDocument(req, res) {
   }
 }
 
+const extractUpload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'application/pdf') {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF files are supported for extraction'));
+    }
+  },
+});
+
+async function extractIncorporation(req, res) {
+  try {
+    const { file } = req;
+    if (!file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const data = await extractIncorporationData(file.buffer);
+    return res.json(data);
+  } catch (error) {
+    if (error.code === 'OPENAI_NOT_CONFIGURED') {
+      return res.status(503).json({ error: 'AI extraction is not available — OPENAI_API_KEY is not set' });
+    }
+    console.error('Extract incorporation error:', error);
+    return res.status(500).json({ error: 'Failed to extract incorporation data' });
+  }
+}
+
 module.exports = {
   uploadDocument,
   getDocuments,
   getDocumentUrl,
   deleteDocument,
   upload,
+  extractUpload,
+  extractIncorporation,
 };
