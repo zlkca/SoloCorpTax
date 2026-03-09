@@ -23,7 +23,12 @@ export default function Home() {
 
   useEffect(() => {
     if (companies.length > 0) {
-      router.push(`/dashboard/${companies[0].id}`);
+      const first = companies[0];
+      if (!first.fiscal_year_end) {
+        router.push(`/onboarding/${first.id}`);
+      } else {
+        router.push(`/dashboard/${first.id}`);
+      }
     }
   }, [companies, router]);
 
@@ -38,7 +43,7 @@ export default function Home() {
     const result = await dispatch(createCompany(formData));
     setSubmitting(false);
     if (result.type === 'company/createCompany/fulfilled') {
-      router.push(`/dashboard/${result.payload.id}`);
+      router.push(`/onboarding/${result.payload.id}`);
     } else {
       setFormError(result.payload || 'Failed to create company.');
     }
