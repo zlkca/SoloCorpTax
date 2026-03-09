@@ -149,8 +149,8 @@ async function extractIncorporation(req, res) {
     const data = await extractIncorporationData(file.buffer);
     return res.json(data);
   } catch (error) {
-    if (error.code === 'OPENAI_NOT_CONFIGURED') {
-      return res.status(503).json({ error: 'AI extraction is not available — OPENAI_API_KEY is not set' });
+    if (error.code === 'AI_NOT_CONFIGURED') {
+      return res.status(503).json({ error: 'AI extraction is not available — AI_API_KEY is not set' });
     }
     console.error('Extract incorporation error:', error);
     return res.status(500).json({ error: 'Failed to extract incorporation data' });

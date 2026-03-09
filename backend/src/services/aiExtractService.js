@@ -44,18 +44,20 @@ function sanitizeFields(raw) {
   };
 }
 
-let openaiClient = null;
+let aiClient = null;
 
 function getClient() {
-  if (!openaiClient) {
-    if (!process.env.OPENAI_API_KEY) {
-      const err = new Error('OPENAI_API_KEY is not configured');
-      err.code = 'OPENAI_NOT_CONFIGURED';
+  if (!aiClient) {
+    const apiKey = process.env.AI_API_KEY || process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      const err = new Error('AI API key is not configured. Set AI_API_KEY in your environment.');
+      err.code = 'AI_NOT_CONFIGURED';
       throw err;
     }
-    openaiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const baseURL = process.env.AI_BASE_URL || 'https://api.deepseek.com';
+    aiClient = new OpenAI({ apiKey, baseURL });
   }
-  return openaiClient;
+  return aiClient;
 }
 
 async function extractIncorporationData(pdfBuffer) {
@@ -71,8 +73,10 @@ async function extractIncorporationData(pdfBuffer) {
 
   const userContent = `${SYSTEM_PROMPT}\n\nDocument text:\n${text.substring(0, 4000)}`;
 
+  const model = process.env.AI_MODEL || 'deepseek-chat';
+
   const completion = await client.chat.completions.create({
-    model: 'gpt-4o-mini',
+    model,
     messages: [{ role: 'user', content: userContent }],
     response_format: { type: 'json_object' },
     temperature: 0,
