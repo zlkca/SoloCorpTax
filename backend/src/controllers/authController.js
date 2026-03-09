@@ -5,7 +5,9 @@ const { hashPassword, comparePassword } = require('../utils/password');
 
 async function register(req, res) {
   try {
-    const { email, password, firstName, lastName } = req.body;
+    const {
+      email, password, firstName, lastName,
+    } = req.body;
 
     const existingUser = await db.query('SELECT * FROM users WHERE email = $1', [email]);
     if (existingUser.rows.length > 0) {
@@ -15,7 +17,8 @@ async function register(req, res) {
     const passwordHash = await hashPassword(password);
 
     const result = await db.query(
-      'INSERT INTO users (email, password_hash, first_name, last_name) VALUES ($1, $2, $3, $4) RETURNING id, email, first_name, last_name',
+      'INSERT INTO users (email, password_hash, first_name, last_name)'
+      + ' VALUES ($1, $2, $3, $4) RETURNING id, email, first_name, last_name',
       [email, passwordHash, firstName, lastName],
     );
 
@@ -96,7 +99,6 @@ async function refreshAccessToken(req, res) {
     }
 
     const payload = verifyRefreshToken(refreshToken);
-    const tokenHash = await bcrypt.hash(refreshToken, 10);
 
     const result = await db.query(
       'SELECT * FROM refresh_tokens WHERE user_id = $1 AND expires_at > NOW()',
@@ -118,7 +120,7 @@ async function refreshAccessToken(req, res) {
 
 async function googleCallback(req, res) {
   try {
-    const user = req.user;
+    const { user } = req;
 
     const accessToken = generateAccessToken({ userId: user.id });
     const refreshToken = generateRefreshToken({ userId: user.id });

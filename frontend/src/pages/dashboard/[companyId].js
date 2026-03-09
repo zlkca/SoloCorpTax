@@ -25,10 +25,13 @@ export default function Dashboard() {
   return (
     <div style={{ padding: '2rem' }}>
       <h1>Dashboard</h1>
-      <p>Company ID: {companyId}</p>
-      
+      <p>
+        Company ID:
+        {companyId}
+      </p>
+
       {loading && <p>Loading transactions...</p>}
-      
+
       <div style={{ marginTop: '2rem' }}>
         <h2>Transactions</h2>
         {transactions.length === 0 ? (
@@ -51,7 +54,8 @@ export default function Dashboard() {
                   </td>
                   <td style={{ padding: '0.5rem' }}>{transaction.description}</td>
                   <td style={{ padding: '0.5rem', textAlign: 'right' }}>
-                    ${transaction.amount.toFixed(2)}
+                    $
+                    {transaction.amount.toFixed(2)}
                   </td>
                   <td style={{ padding: '0.5rem' }}>{transaction.category || 'Uncategorized'}</td>
                 </tr>

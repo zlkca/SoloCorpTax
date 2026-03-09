@@ -5,6 +5,7 @@ import '../styles/globals.css';
 function MyApp({ Component, pageProps }) {
   return (
     <Provider store={store}>
+      {/* eslint-disable-next-line react/jsx-props-no-spreading */}
       <Component {...pageProps} />
     </Provider>
   );

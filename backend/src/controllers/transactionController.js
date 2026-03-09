@@ -2,7 +2,7 @@ const multer = require('multer');
 const { parse } = require('csv-parse');
 const db = require('../config/database');
 const { suggestCategory, detectPersonalSpending } = require('../utils/categorization');
-const { normalizeDescription, extractVendor, detectDuplicates } = require('../utils/transactionUtils');
+const { extractVendor, detectDuplicates } = require('../utils/transactionUtils');
 const { logAudit } = require('../utils/auditLog');
 
 const upload = multer({ storage: multer.memoryStorage() });
@@ -25,6 +25,7 @@ async function uploadCSV(req, res) {
       trim: true,
     });
 
+    // eslint-disable-next-line no-restricted-syntax
     for await (const record of parser) {
       records.push(record);
     }
@@ -37,7 +38,8 @@ async function uploadCSV(req, res) {
     let imported = 0;
     let skipped = 0;
 
-    for (const record of records) {
+    for (let i = 0; i < records.length; i += 1) {
+      const record = records[i];
       const transactionDate = new Date(record.date || record.Date || record.DATE);
       const description = record.description || record.Description || record.DESCRIPTION;
       const amount = parseFloat(record.amount || record.Amount || record.AMOUNT);
@@ -45,44 +47,43 @@ async function uploadCSV(req, res) {
 
       if (!transactionDate || !description || Number.isNaN(amount)) {
         skipped += 1;
-        continue;
-      }
-
-      const newTransaction = {
-        transaction_date: transactionDate,
-        description,
-        amount,
-      };
-
-      const duplicates = detectDuplicates(existingTransactions.rows, newTransaction);
-      if (duplicates.length > 0) {
-        skipped += 1;
-        continue;
-      }
-
-      const vendor = extractVendor(description);
-      const suggestedCategory = suggestCategory(description, amount);
-      const personalCheck = detectPersonalSpending(description);
-
-      await db.query(
-        `INSERT INTO transactions 
-        (company_id, transaction_date, description, amount, vendor, category, 
-         needs_review, source_file, account_name)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-        [
-          company.id,
-          transactionDate,
+      } else {
+        const newTransaction = {
+          transaction_date: transactionDate,
           description,
           amount,
-          vendor,
-          suggestedCategory,
-          !suggestedCategory || personalCheck.isPersonal,
-          file.originalname,
-          accountName,
-        ],
-      );
+        };
 
-      imported += 1;
+        const duplicates = detectDuplicates(existingTransactions.rows, newTransaction);
+        if (duplicates.length > 0) {
+          skipped += 1;
+        } else {
+          const vendor = extractVendor(description);
+          const suggestedCategory = suggestCategory(description, amount);
+          const personalCheck = detectPersonalSpending(description);
+
+          // eslint-disable-next-line no-await-in-loop
+          await db.query(
+            `INSERT INTO transactions 
+            (company_id, transaction_date, description, amount, vendor, category,
+             needs_review, source_file, account_name)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+            [
+              company.id,
+              transactionDate,
+              description,
+              amount,
+              vendor,
+              suggestedCategory,
+              !suggestedCategory || personalCheck.isPersonal,
+              file.originalname,
+              accountName,
+            ],
+          );
+
+          imported += 1;
+        }
+      }
     }
 
     await logAudit(user.id, company.id, 'IMPORT_CSV', 'transactions', null, {
@@ -105,7 +106,9 @@ async function uploadCSV(req, res) {
 async function getTransactions(req, res) {
   try {
     const { company } = req;
-    const { needsReview, category, startDate, endDate } = req.query;
+    const {
+      needsReview, category, startDate, endDate,
+    } = req.query;
 
     let query = 'SELECT * FROM transactions WHERE company_id = $1';
     const params = [company.id];
@@ -261,7 +264,7 @@ async function getSummary(req, res) {
     const params = [company.id];
 
     if (taxYear) {
-      dateFilter = `AND EXTRACT(YEAR FROM transaction_date) = $2`;
+      dateFilter = 'AND EXTRACT(YEAR FROM transaction_date) = $2';
       params.push(taxYear);
     }
 

@@ -16,7 +16,7 @@ describe('Home Page', () => {
         <Home />
       </Provider>,
     );
-    
+
     expect(screen.getByText('SoloCorpTax')).toBeInTheDocument();
   });
 });

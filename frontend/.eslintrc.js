@@ -23,5 +23,22 @@ module.exports = {
     'import/prefer-default-export': 'off',
     'no-console': 'off',
     'max-len': ['error', { code: 120, ignoreComments: true }],
+    'no-param-reassign': ['error', {
+      props: true,
+      ignorePropertyModificationsFor: [
+        'state',
+        'config',
+        'acc',
+        'accumulator',
+        'e',
+        'ctx',
+        'context',
+        'req',
+        'request',
+        'res',
+        'response',
+        'staticContext',
+      ],
+    }],
   },
 };

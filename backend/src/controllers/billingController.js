@@ -65,7 +65,7 @@ async function webhook(req, res) {
         const session = event.data.object;
         const { userId, planCode } = session.metadata;
 
-        let stripeCustomerId = session.customer;
+        const stripeCustomerId = session.customer;
         let stripeSubscriptionId = null;
 
         if (session.mode === 'subscription') {

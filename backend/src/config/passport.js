@@ -44,7 +44,8 @@ passport.use(
             await db.query('UPDATE users SET google_id = $1 WHERE id = $2', [googleId, result.rows[0].id]);
           } else {
             result = await db.query(
-              'INSERT INTO users (email, google_id, first_name, last_name, email_verified) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+              'INSERT INTO users (email, google_id, first_name, last_name, email_verified)'
+              + ' VALUES ($1, $2, $3, $4, $5) RETURNING *',
               [email, googleId, profile.name.givenName, profile.name.familyName, true],
             );
           }

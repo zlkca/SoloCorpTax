@@ -14,7 +14,7 @@ async function checkCompanyAccess(req, res, next) {
       return res.status(403).json({ error: 'Access denied to this company' });
     }
 
-    req.company = result.rows[0];
+    [req.company] = result.rows;
     return next();
   } catch (error) {
     return res.status(500).json({ error: 'Error checking company access' });

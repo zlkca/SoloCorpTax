@@ -83,7 +83,9 @@ export default function Login() {
         <button
           type="button"
           onClick={() => router.push('/register')}
-          style={{ background: 'none', border: 'none', color: '#0070f3', cursor: 'pointer' }}
+          style={{
+            background: 'none', border: 'none', color: '#0070f3', cursor: 'pointer',
+          }}
         >
           Register
         </button>

@@ -1,5 +1,4 @@
 const multer = require('multer');
-const path = require('path');
 const db = require('../config/database');
 const { uploadFile, getSignedUrl } = require('../config/s3');
 
@@ -19,7 +18,7 @@ const upload = multer({
 
 async function uploadDocument(req, res) {
   try {
-    const { company, user } = req;
+    const { company } = req;
     const { file } = req;
     const { type, taxYear } = req.body;
 

@@ -2,82 +2,7 @@ const PDFDocument = require('pdfkit');
 const db = require('../config/database');
 const { uploadFile, getSignedUrl } = require('../config/s3');
 
-async function generateTaxReadyPack(req, res) {
-  try {
-    const { company, user } = req;
-    const { taxYear } = req.body;
-
-    const subscription = await db.query(
-      'SELECT * FROM subscriptions WHERE user_id = $1 AND status = $2',
-      [user.id, 'ACTIVE'],
-    );
-
-    if (subscription.rows.length === 0) {
-      return res.status(403).json({ error: 'Active subscription required to export' });
-    }
-
-    const transactions = await db.query(
-      `SELECT * FROM transactions 
-      WHERE company_id = $1 AND EXTRACT(YEAR FROM transaction_date) = $2
-      ORDER BY transaction_date`,
-      [company.id, taxYear],
-    );
-
-    const summary = await db.query(
-      `SELECT 
-        category,
-        SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END) as total_income,
-        SUM(CASE WHEN amount < 0 THEN ABS(amount) ELSE 0 END) as total_expense
-      FROM transactions 
-      WHERE company_id = $1 AND EXTRACT(YEAR FROM transaction_date) = $2
-      GROUP BY category`,
-      [company.id, taxYear],
-    );
-
-    const pdfBuffer = await generatePDF(company, taxYear, summary.rows, transactions.rows);
-
-    const timestamp = Date.now();
-    const pdfKey = `companies/${company.id}/exports/${taxYear}-tax-ready-pack-${timestamp}.pdf`;
-    
-    await uploadFile(pdfKey, pdfBuffer, 'application/pdf');
-
-    const csvContent = generateCSV(summary.rows);
-    const csvKey = `companies/${company.id}/exports/${taxYear}-pl-summary-${timestamp}.csv`;
-    
-    await uploadFile(csvKey, Buffer.from(csvContent), 'text/csv');
-
-    await db.query(
-      `INSERT INTO exports (company_id, tax_year, type, s3_key, file_name)
-      VALUES ($1, $2, $3, $4, $5), ($1, $2, $6, $7, $8)`,
-      [
-        company.id,
-        taxYear,
-        'pdf',
-        pdfKey,
-        `${taxYear}-tax-ready-pack.pdf`,
-        'csv',
-        csvKey,
-        `${taxYear}-pl-summary.csv`,
-      ],
-    );
-
-    const pdfUrl = await getSignedUrl(pdfKey, 3600);
-    const csvUrl = await getSignedUrl(csvKey, 3600);
-
-    return res.json({
-      message: 'Tax-Ready Pack generated successfully',
-      files: {
-        pdf: { url: pdfUrl, fileName: `${taxYear}-tax-ready-pack.pdf` },
-        csv: { url: csvUrl, fileName: `${taxYear}-pl-summary.csv` },
-      },
-    });
-  } catch (error) {
-    console.error('Generate export error:', error);
-    return res.status(500).json({ error: 'Failed to generate export' });
-  }
-}
-
-async function generatePDF(company, taxYear, summary, transactions) {
+async function generatePDF(company, taxYear, summary) {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ margin: 50 });
     const buffers = [];
@@ -133,7 +58,9 @@ async function generatePDF(company, taxYear, summary, transactions) {
     doc.text('4. This is educational guidance only - verify all information before filing');
 
     doc.moveDown(2);
-    doc.fontSize(10).text('DISCLAIMER: This document is for informational purposes only and does not constitute tax advice. Always verify accuracy before filing.', { align: 'center' });
+    const disclaimer = 'DISCLAIMER: This document is for informational purposes only'
+      + ' and does not constitute tax advice. Always verify accuracy before filing.';
+    doc.fontSize(10).text(disclaimer, { align: 'center' });
 
     doc.end();
   });
@@ -149,6 +76,74 @@ function generateCSV(summary) {
   });
 
   return csv;
+}
+
+async function generateTaxReadyPack(req, res) {
+  try {
+    const { company, user } = req;
+    const { taxYear } = req.body;
+
+    const subscription = await db.query(
+      'SELECT * FROM subscriptions WHERE user_id = $1 AND status = $2',
+      [user.id, 'ACTIVE'],
+    );
+
+    if (subscription.rows.length === 0) {
+      return res.status(403).json({ error: 'Active subscription required to export' });
+    }
+
+    const summary = await db.query(
+      `SELECT
+        category,
+        SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END) as total_income,
+        SUM(CASE WHEN amount < 0 THEN ABS(amount) ELSE 0 END) as total_expense
+      FROM transactions
+      WHERE company_id = $1 AND EXTRACT(YEAR FROM transaction_date) = $2
+      GROUP BY category`,
+      [company.id, taxYear],
+    );
+
+    const pdfBuffer = await generatePDF(company, taxYear, summary.rows);
+
+    const timestamp = Date.now();
+    const pdfKey = `companies/${company.id}/exports/${taxYear}-tax-ready-pack-${timestamp}.pdf`;
+
+    await uploadFile(pdfKey, pdfBuffer, 'application/pdf');
+
+    const csvContent = generateCSV(summary.rows);
+    const csvKey = `companies/${company.id}/exports/${taxYear}-pl-summary-${timestamp}.csv`;
+
+    await uploadFile(csvKey, Buffer.from(csvContent), 'text/csv');
+
+    await db.query(
+      `INSERT INTO exports (company_id, tax_year, type, s3_key, file_name)
+      VALUES ($1, $2, $3, $4, $5), ($1, $2, $6, $7, $8)`,
+      [
+        company.id,
+        taxYear,
+        'pdf',
+        pdfKey,
+        `${taxYear}-tax-ready-pack.pdf`,
+        'csv',
+        csvKey,
+        `${taxYear}-pl-summary.csv`,
+      ],
+    );
+
+    const pdfUrl = await getSignedUrl(pdfKey, 3600);
+    const csvUrl = await getSignedUrl(csvKey, 3600);
+
+    return res.json({
+      message: 'Tax-Ready Pack generated successfully',
+      files: {
+        pdf: { url: pdfUrl, fileName: `${taxYear}-tax-ready-pack.pdf` },
+        csv: { url: csvUrl, fileName: `${taxYear}-pl-summary.csv` },
+      },
+    });
+  } catch (error) {
+    console.error('Generate export error:', error);
+    return res.status(500).json({ error: 'Failed to generate export' });
+  }
 }
 
 async function getExports(req, res) {
